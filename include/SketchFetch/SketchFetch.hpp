@@ -23,7 +23,7 @@ public:
   using ModelSearchResults = std::optional<std::vector<ModelSearchResult>>;
   using download_t = std::vector<uint8_t>;
 
-  SketchFetch() = default;
+  SketchFetch();
   SketchFetch(std::filesystem::path,
               std::filesystem::path,
               std::filesystem::path);
@@ -83,6 +83,11 @@ inline auto SketchFetch::print() -> void
       working_folder.string(),
       model_folder.string(),
       thumbnail_folder.string());
+}
+inline SketchFetch::SketchFetch()
+{
+  setModelFolder(model_folder, true);
+  setThumbnailFolder(thumbnail_folder, true);
 }
 
 inline SketchFetch::SketchFetch(
@@ -238,7 +243,7 @@ inline auto SketchFetch::getThumbnailFolder() -> std::filesystem::path
     return std::nullopt;
   }
 
-  return conn.downloadModel(url);
+  return conn.download(url);
 }
 auto SketchFetch::downloadModel(std::string_view url) const -> void {}
 auto SketchFetch::downloadModel(ModelSearchResult const& result) const -> void

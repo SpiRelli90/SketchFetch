@@ -35,19 +35,31 @@ target_include_directories(
 
 target_compile_features(SketchFetch_SketchFetch INTERFACE cxx_std_20)
 
-find_package(CURL CONFIG REQUIRED)
-find_package(restclient-cpp CONFIG REQUIRED)
+
+include(FetchContent)
+FetchContent_Declare(
+  httplib
+  GIT_REPOSITORY git@github.com:yhirose/cpp-httplib.git
+  GIT_TAG        8e10d4e8e7febafce0632810262e81e853b2065f # release-0.11.2
+)
+OPTION(HTTPLIB_REQUIRE_OPENSSL "" ON)
+option(HTTPLIB_COMPILE "" ON)
+FetchContent_MakeAvailable(httplib)
+
 find_package(fmt CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(libzippp CONFIG REQUIRED)
+# find_package(httplib)
+# find_path(CPP_HTTPLIB_INCLUDE_DIRS "httplib.h")
 
 target_link_libraries(SketchFetch_SketchFetch INTERFACE
  fmt::fmt
  nlohmann_json::nlohmann_json
- restclient-cpp
+ httplib::httplib 
  libzippp::libzippp
 
  )
+
 
 # ---- Install rules ----
 

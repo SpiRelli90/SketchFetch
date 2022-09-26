@@ -14,8 +14,9 @@
 
 #include "Authentication.hpp"
 #include "Util.hpp"
-#include "restclient-cpp/connection.h"
-#include "restclient-cpp/restclient.h"
+#include "httplib.h"
+// #include "restclient-cpp/connection.h"
+// #include "restclient-cpp/restclient.h"
 using json = nlohmann::json;
 namespace SketchFetch
 {
@@ -28,7 +29,7 @@ private:
 public:
   Connection(std::string_view username_, std::string_view password_);
   Connection() = default;
-  ~Connection();
+  // ~Connection();
   Connection(const Connection&) = delete;
   Connection& operator=(const Connection&) = delete;
 
@@ -37,8 +38,6 @@ public:
       -> std::optional<std::vector<uint8_t>>;
   auto getModelDownloadURI(std::string_view model_uid) const
       -> std::variant<std::string, int>;
-  auto downloadModel(std::string_view model_url) const
-      -> std::optional<std::vector<uint8_t>>;
   auto downloadThumbnails(std::span<std::string> urls) const
       -> std::optional<std::vector<std::vector<uint8_t>>>;
 
@@ -50,35 +49,27 @@ public:
 Connection::Connection(std::string_view username_, std::string_view password_)
     : auth(username_, password_)
 {
-  RestClient::init();
-}
-
-Connection::~Connection()
-{
-  RestClient::disable();
 }
 
 inline auto Connection::get(const std::string& query) const
     -> std::optional<json>
 {
   Util::Timer t;
-  RestClient::Connection conn {SketchFabAPI::api_endpoint.data()};
+  httplib::Client conn {SketchFabAPI::api_endpoint.data()};
   if (auth.getAuthenticated()) {
-    RestClient::HeaderFields header {};
-    header["Authorization"] = fmt::format("Bearer {}", auth.getAccessToken());
-    conn.SetHeaders(header);
+    conn.set_bearer_token_auth(auth.getAccessToken().data());
   }
 
-  auto r = conn.get(query);
-
-  if (r.code == 200) {
+  std::string str = "/v3" + query;
+  auto r = conn.Get(str.c_str());
+  if (r->status == 200) {
     try {
-      return json::parse(r.body);
+      return json::parse(r->body);
     } catch (const std::exception& e) {
       fmt::print(fg(fmt::color::red), "ERROR Parsing Error: {}\n", e.what());
     }
   } else {
-    fmt::print(fg(fmt::color::red), "ERROR Response Code: {}\n", r.code);
+    fmt::print(fg(fmt::color::red), "ERROR Response Code: {}\n", r->status);
   }
   return std::nullopt;
 }
@@ -87,12 +78,20 @@ auto Connection::download(std::string_view url) const
     -> std::optional<std::vector<uint8_t>>
 {
   Util::Timer t;
-  RestClient::Connection conn {url.data()};
-  auto r = conn.get("");
-  if (r.code == 200) {
-    return std::vector<uint8_t>(r.body.begin(), r.body.end());
+  auto sep = url.find(".com");
+  auto path {url.substr(sep + 4)};
+  std::string host {url.substr(0, sep + 4)};
+  fmt::print("{}\n{}\n{}\n", sep, path, host);
+  httplib::Client conn {host.c_str()};
+  if (auto r = conn.Get(path.data())) {
+    if (r->status == 200) {
+      return std::vector<uint8_t>(r->body.begin(), r->body.end());
+    } else {
+      fmt::print(fg(fmt::color::red), "ERROR Response Code: {}\n", r->status);
+    }
   } else {
-    fmt::print(fg(fmt::color::red), "ERROR Response Code: {}\n", r.code);
+    throw std::runtime_error(
+        std::format("Httplib Error: {}", to_string(r.error())));
   }
   return std::nullopt;
 }
@@ -101,28 +100,22 @@ auto Connection::getModelDownloadURI(std::string_view model_uid) const
     -> std::variant<std::string, int>
 {
   std::variant<std::string, int> ret;
-  RestClient::HeaderFields header {};
-  header["Authorization"] = fmt::format("Bearer {}", auth.getAccessToken());
-  RestClient::Connection conn {SketchFabAPI::download_endpoint.data()};
-  conn.SetHeaders(header);
-  auto r = conn.get(fmt::format("/{}/download", model_uid));
-  if (r.code == 200) {
+  httplib::Client conn {SketchFabAPI::api_endpoint.data()};
+  conn.set_bearer_token_auth(auth.getAccessToken().data());
+  auto r = conn.Get(fmt::format("/v3/models/{}/download", model_uid).c_str());
+
+  if (r->status == 200) {
     try {
-      auto resp = json::parse(r.body);
+      auto resp = json::parse(r->body);
       ret = resp.at("gltf").at("url").get<std::string>();  // get options
     } catch (const std::exception& e) {
-      fmt::print(fg(fmt::color::red), "ERROR Parsing Error: {}\n", e.what());
+      fmt::print(
+          fg(fmt::color::red), "ERROR Json Parsing Error: {}\n", e.what());
     }
   } else {
-    ret = r.code;
+    ret = r->status;
   }
   return ret;
-}
-
-auto Connection::downloadModel(std::string_view model_url) const
-    -> std::optional<std::vector<uint8_t>>
-{
-  return download(model_url);
 }
 
 auto Connection::downloadThumbnails(std::span<std::string> urls) const
