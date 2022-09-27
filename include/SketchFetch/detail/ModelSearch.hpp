@@ -82,8 +82,7 @@ struct ModelSearchQuery
 
   operator std::string() const
   {
-    std::string ret =
-        fmt::format("/search?count={}&cursor={}&type=models", count, cursor);
+    std::string ret = fmt::format("/search?count={}&cursor={}&type=models", count, cursor);
     if (q)
       ret += fmt::format("&q={}", Util::percentEncode(*q));
 
@@ -179,17 +178,13 @@ struct ModelSearchQuery
     if (archives_max_size)
       ret += fmt::format("&archives_max_size={}", *archives_max_size);
     if (archives_max_face_count)
-      ret +=
-          fmt::format("&archives_max_face_count={}", *archives_max_face_count);
+      ret += fmt::format("&archives_max_face_count={}", *archives_max_face_count);
     if (archives_max_vertex_count)
-      ret += fmt::format("&archives_max_vertex_count={}",
-                         *archives_max_vertex_count);
+      ret += fmt::format("&archives_max_vertex_count={}", *archives_max_vertex_count);
     if (archives_max_texture_count)
-      ret += fmt::format("&archives_max_texture_count={}",
-                         *archives_max_texture_count);
+      ret += fmt::format("&archives_max_texture_count={}", *archives_max_texture_count);
     if (archives_texture_max_resolution)
-      ret += fmt::format("&archives_texture_max_resolution={}",
-                         *archives_texture_max_resolution);
+      ret += fmt::format("&archives_texture_max_resolution={}", *archives_texture_max_resolution);
     if (archives_flavours)
       ret += fmt::format("&archives_flavours={}", *archives_flavours);
     fmt::print("{}\n", ret);
@@ -202,15 +197,10 @@ struct ModelSearchQuery
 template<>
 struct fmt::formatter<SketchFetch::ModelSearchResult>
 {
-  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin())
-  {
-    return ctx.begin();
-  }
+  constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) { return ctx.begin(); }
   template<typename FormatContext>
-  auto format(SketchFetch::ModelSearchResult const& result,
-              FormatContext& ctx) const -> decltype(ctx.out())
+  auto format(SketchFetch::ModelSearchResult const& result, FormatContext& ctx) const -> decltype(ctx.out())
   {
-    return fmt::format_to(
-        ctx.out(), "[{};{}]", result.name, result.description);
+    return fmt::format_to(ctx.out(), "[{};{}]", result.name, result.description);
   }
 };

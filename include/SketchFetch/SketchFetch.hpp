@@ -24,9 +24,7 @@ public:
   using download_t = std::vector<uint8_t>;
 
   SketchFetch();
-  SketchFetch(std::filesystem::path,
-              std::filesystem::path,
-              std::filesystem::path);
+  SketchFetch(std::filesystem::path, std::filesystem::path, std::filesystem::path);
   SketchFetch(std::string_view, std::string_view, SketchFlag);
 
   auto setAccess(std::string_view, std::string_view) -> void;
@@ -40,23 +38,19 @@ public:
   auto getModelFolder() -> std::filesystem::path;
   auto getThumbnailFolder() -> std::filesystem::path;
 
-  [[nodiscard]] auto search(ModelSearchQuery const&) const
-      -> std::optional<std::vector<ModelSearchResult>>;
-  [[nodiscard]] auto searchJSON(ModelSearchQuery const&) const
-      -> std::optional<json>;
+  [[nodiscard]] auto search(ModelSearchQuery const&) const -> std::optional<std::vector<ModelSearchResult>>;
+  [[nodiscard]] auto searchJSON(ModelSearchQuery const&) const -> std::optional<json>;
 
   // auto getThumbnails(ModelSearchResult const&) const
   //     -> std::unordered_map<std::string, download_t>;
 
-  auto getThumbnail(ModelSearchResult const&) const
-      -> std::optional<download_t>;
+  auto getThumbnail(ModelSearchResult const&) const -> std::optional<download_t>;
   auto downloadThumbnail(ModelSearchResult const&) const -> void;
 
   auto getThumbnail(std::string_view) const -> std::optional<download_t>;
   auto downloadThumbnail(std::string_view, std::string_view) const -> void;
 
-  [[nodiscard]] auto getModel(ModelSearchResult const&) const
-      -> std::optional<download_t>;
+  [[nodiscard]] auto getModel(ModelSearchResult const&) const -> std::optional<download_t>;
   auto downloadModel(std::string_view) const -> void;
   auto downloadModel(ModelSearchResult const&) const -> void;
 
@@ -64,10 +58,8 @@ public:
 
 private:
   std::filesystem::path working_folder = std::filesystem::current_path();
-  std::filesystem::path thumbnail_folder =
-      std::filesystem::current_path().append("thumbnails");
-  std::filesystem::path model_folder =
-      std::filesystem::current_path().append("models");
+  std::filesystem::path thumbnail_folder = std::filesystem::current_path().append("thumbnails");
+  std::filesystem::path model_folder = std::filesystem::current_path().append("models");
   Connection conn;
 
   auto storeToDisk(const download_t&, std::filesystem::path) const -> void;
@@ -90,23 +82,20 @@ inline SketchFetch::SketchFetch()
   setThumbnailFolder(thumbnail_folder, true);
 }
 
-inline SketchFetch::SketchFetch(
-    std::string_view username_,
-    std::string_view password_,
-    SketchFlag create = SketchFlag::DontCreateFolder)
+inline SketchFetch::SketchFetch(std::string_view username_,
+                                std::string_view password_,
+                                SketchFlag create = SketchFlag::DontCreateFolder)
     : conn(username_, password_)
 {
   setModelFolder(model_folder, create == SketchFlag::CreateFolder);
   setThumbnailFolder(thumbnail_folder, create == SketchFlag::CreateFolder);
 }
 
-inline auto SketchFetch::getThumbnail(std::string_view url) const
-    -> std::optional<download_t>
+inline auto SketchFetch::getThumbnail(std::string_view url) const -> std::optional<download_t>
 {
   return conn.download(url);
 }
-inline auto SketchFetch::downloadThumbnail(std::string_view url,
-                                           std::string_view name) const -> void
+inline auto SketchFetch::downloadThumbnail(std::string_view url, std::string_view name) const -> void
 {
   auto thumbnail = getThumbnail(url);
   auto file_name = thumbnail_folder;
@@ -115,14 +104,12 @@ inline auto SketchFetch::downloadThumbnail(std::string_view url,
   storeToDisk(*thumbnail, file_name);
 }
 
-inline auto SketchFetch::getThumbnail(ModelSearchResult const& result) const
-    -> std::optional<download_t>
+inline auto SketchFetch::getThumbnail(ModelSearchResult const& result) const -> std::optional<download_t>
 {
   return conn.download(result.thumbnail);
 }
 
-inline auto SketchFetch::downloadThumbnail(
-    ModelSearchResult const& result) const -> void
+inline auto SketchFetch::downloadThumbnail(ModelSearchResult const& result) const -> void
 {
   auto thumbnail = getThumbnail(result);
   auto file_name = thumbnail_folder;
@@ -130,8 +117,7 @@ inline auto SketchFetch::downloadThumbnail(
   storeToDisk(*thumbnail, file_name);
 }
 
-inline auto SketchFetch::storeToDisk(const download_t& data,
-                                     std::filesystem::path path) const -> void
+inline auto SketchFetch::storeToDisk(const download_t& data, std::filesystem::path path) const -> void
 {
   if (std::ofstream os {path, std::ios::binary}; os.is_open()) {
     os.write(reinterpret_cast<const char*>(data.data()), data.size());
@@ -140,8 +126,7 @@ inline auto SketchFetch::storeToDisk(const download_t& data,
   }
 }
 
-inline auto SketchFetch::createOrCheckFolder(std::filesystem::path const& path,
-                                             bool create) const -> void
+inline auto SketchFetch::createOrCheckFolder(std::filesystem::path const& path, bool create) const -> void
 {
   using namespace std::filesystem;
   if (create) {
@@ -152,38 +137,33 @@ inline auto SketchFetch::createOrCheckFolder(std::filesystem::path const& path,
   }
 }
 
-[[nodiscard]] inline auto SketchFetch::search(ModelSearchQuery const& query)
-    const -> std::optional<std::vector<ModelSearchResult>>
+[[nodiscard]] inline auto SketchFetch::search(ModelSearchQuery const& query) const
+    -> std::optional<std::vector<ModelSearchResult>>
 {
-  if (const auto temp_result = conn.get(query);
-      temp_result && !(*temp_result)["results"].empty())
-  {
+  if (const auto temp_result = conn.get(query); temp_result && !(*temp_result)["results"].empty()) {
     std::vector<ModelSearchResult> model_search_results;
     for (auto const& result : (*temp_result)["results"]) {
-      model_search_results.push_back(ModelSearchResult {
-          .uri = result["uri"].get<std::string>(),
-          .uid = result["uid"].get<std::string>(),
-          .name = result["name"].get<std::string>(),
-          .description = result["description"].get<std::string>(),
-          .thumbnail =
-              result["thumbnails"]["images"][0]["url"].get<std::string>(),
-          .views = result["viewCount"].get<std::size_t>(),
-          .likes = result["likeCount"].get<std::size_t>(),
-          .isDownloadable = result["isDownloadable"].get<bool>()});
+      model_search_results.push_back(
+          ModelSearchResult {.uri = result["uri"].get<std::string>(),
+                             .uid = result["uid"].get<std::string>(),
+                             .name = result["name"].get<std::string>(),
+                             .description = result["description"].get<std::string>(),
+                             .thumbnail = result["thumbnails"]["images"][0]["url"].get<std::string>(),
+                             .views = result["viewCount"].get<std::size_t>(),
+                             .likes = result["likeCount"].get<std::size_t>(),
+                             .isDownloadable = result["isDownloadable"].get<bool>()});
     }
     return std::make_optional(model_search_results);
   }
   return std::nullopt;
 }
 
-[[nodiscard]] inline auto SketchFetch::searchJSON(
-    ModelSearchQuery const& query) const -> std::optional<json>
+[[nodiscard]] inline auto SketchFetch::searchJSON(ModelSearchQuery const& query) const -> std::optional<json>
 {
   return conn.get(query);
 }
 
-inline auto SketchFetch::setAccess(std::string_view username_,
-                                   std::string_view password_) -> void
+inline auto SketchFetch::setAccess(std::string_view username_, std::string_view password_) -> void
 {
   conn.setAccess(username_, password_);
 }
@@ -198,22 +178,19 @@ inline auto SketchFetch::getAuthenticated() -> bool
   return conn.getAuthenticated();
 }
 
-inline auto SketchFetch::setThumbnailFolder(
-    std::filesystem::path const& thumbnail_folder_, bool create = false) -> void
+inline auto SketchFetch::setThumbnailFolder(std::filesystem::path const& thumbnail_folder_, bool create = false) -> void
 {
   createOrCheckFolder(thumbnail_folder_, create);
   thumbnail_folder = thumbnail_folder_;
 }
 
-inline auto SketchFetch::setModelFolder(
-    std::filesystem::path const& model_folder_, bool create = false) -> void
+inline auto SketchFetch::setModelFolder(std::filesystem::path const& model_folder_, bool create = false) -> void
 {
   createOrCheckFolder(model_folder_, create);
   model_folder = model_folder_;
 }
 
-inline auto SketchFetch::setWorkingFolder(
-    std::filesystem::path const& working_folder_) -> void
+inline auto SketchFetch::setWorkingFolder(std::filesystem::path const& working_folder_) -> void
 {
   createOrCheckFolder(working_folder_, false);
   working_folder = working_folder_;
@@ -232,8 +209,7 @@ inline auto SketchFetch::getThumbnailFolder() -> std::filesystem::path
   return thumbnail_folder;
 }
 
-[[nodiscard]] auto SketchFetch::getModel(ModelSearchResult const& result) const
-    -> std::optional<download_t>
+[[nodiscard]] auto SketchFetch::getModel(ModelSearchResult const& result) const -> std::optional<download_t>
 {
   std::string url;
   try {
