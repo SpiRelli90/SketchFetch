@@ -143,7 +143,7 @@ inline auto Connection::authenticate() -> bool
   return auth.getAuthenticated();
 }
 
-inline auto Connection::getAuthenticated() -> bools
+inline auto Connection::getAuthenticated() -> bool
 {
   return auth.getAuthenticated();
 }

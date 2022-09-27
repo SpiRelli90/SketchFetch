@@ -157,7 +157,7 @@ inline auto Auth::sendAndParse(httplib::Params const& params) -> void
           fmt::format("Authentication Error:\tCode: {}\n{}\n", response->status, response->body));
     }
   } else {
-    throw std::runtime_error(std::format("Httplib Error: {}", to_string(response.error())));
+    throw std::runtime_error(fmt::format("Httplib Error: {}", to_string(response.error())));
   }
 }
 }  // namespace SketchFetch::Authentication
